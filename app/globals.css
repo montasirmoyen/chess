@@ -225,6 +225,12 @@
       inset 0 0 0 999px var(--chess-selected-fill);
   }
 
+  .chess-square-in-check {
+    box-shadow:
+      inset 0 0 0 3px rgb(153 27 27 / 0.95),
+      inset 0 0 0 999px rgb(220 38 38 / 0.16);
+  }
+
   .chess-square-overlay {
     position: absolute;
     inset: 0;
