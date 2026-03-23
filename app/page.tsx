@@ -1,19 +1,13 @@
-import { Button } from "@/components/ui/button"
+import { ChessBoard } from "@/components/chess/chess-board"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 export default function Page() {
   return (
-    <div className="flex min-h-svh p-6">
-      <div className="flex max-w-md min-w-0 flex-col gap-4 text-sm leading-loose">
-        <div>
-          <h1 className="font-medium">Project ready!</h1>
-          <p>You may now add components and start building.</p>
-          <p>We&apos;ve already added the button component for you.</p>
-          <Button className="mt-2">Button</Button>
-        </div>
-        <div className="font-mono text-xs text-muted-foreground">
-          (Press <kbd>d</kbd> to toggle dark mode)
-        </div>
+    <main className="chess-page-bg relative flex min-h-svh items-center justify-center px-4 py-8">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
       </div>
-    </div>
+      <ChessBoard />
+    </main>
   )
 }
