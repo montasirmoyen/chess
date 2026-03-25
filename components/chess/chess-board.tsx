@@ -6,7 +6,7 @@ import { Bot, User } from "lucide-react"
 
 import { ChessPiece } from "@/components/chess/chess-piece"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { cn, capitalize } from "@/lib/utils"
 
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"] as const
 
@@ -289,7 +289,7 @@ export function ChessBoard() {
       : checkedColor
         ? `${getColorLabel(checkedColor)} is in check!`
         : selectedPiece
-          ? `${getPieceLabel(selectedPiece.type)} on ${getSquareLabel(selectedSquare!)} — ${legalMoves.length} legal move${legalMoves.length === 1 ? "" : "s"}`
+          ? `${capitalize(getPieceLabel(selectedPiece.type))} on ${getSquareLabel(selectedSquare!)} — ${legalMoves.length} legal move${legalMoves.length === 1 ? "" : "s"}`
           : game.turn() === "w"
             ? "Your turn — select a white piece."
             : "Waiting for AI…"
@@ -336,7 +336,7 @@ export function ChessBoard() {
                     })()
                   : undefined
               const pieceName = piece
-                ? `${piece.color === "w" ? "white" : "black"} ${getPieceLabel(piece.type)}`
+                ? `${piece.color === "w" ? "white" : "black"} ${capitalize(getPieceLabel(piece.type))}`
                 : "empty square"
 
               return (
