@@ -58,6 +58,11 @@ type GameResult =
   | { type: "checkmate"; winner: Color }
   | { type: "draw"; reason: string }
 
+type MoveHistoryEntry = {
+  color: Color
+  san: string
+}
+
 type PieceIdsBySquare = Record<string, string>
 
 function createInitialPieceIds() {
@@ -105,12 +110,13 @@ function CapturedPieces({
   )
 }
 
-export function ChessBoard() {
+export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: boolean }) {
   const [fen, setFen] = useState(() => new Chess().fen())
   const [gameResult, setGameResult] = useState<GameResult | null>(null)
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null)
   const [pieceIdsBySquare, setPieceIdsBySquare] = useState<PieceIdsBySquare>(() => createInitialPieceIds())
   const pieceIdsRef = useRef<PieceIdsBySquare>(pieceIdsBySquare)
+  const [moveHistory, setMoveHistory] = useState<MoveHistoryEntry[]>([])
   const [lastMove, setLastMove] = useState<{
     pieceId: string
     from: Square
@@ -161,7 +167,9 @@ export function ChessBoard() {
   useEffect(() => {
     if (gameResult || game.turn() !== "b") return
 
-    setIsAiThinking(true)
+    const thinkingStartTimeout = setTimeout(() => {
+      setIsAiThinking(true)
+    }, 0)
 
     const timeout = setTimeout(() => {
       const moves = game.moves({ verbose: true })
@@ -174,6 +182,8 @@ export function ChessBoard() {
       const next = new Chess()
       next.load(fen)
       const result = next.move({ from: pick.from, to: pick.to, promotion: pick.promotion ?? "q" })
+
+      setMoveHistory((prev) => [...prev, { color: result.color, san: result.san }])
 
       if (result.captured) {
         setCapturedByBlack((prev) => [...prev, result.captured as PieceSymbol])
@@ -204,7 +214,10 @@ export function ChessBoard() {
       setIsAiThinking(false)
     }, 500)
 
-    return () => clearTimeout(timeout)
+    return () => {
+      clearTimeout(thinkingStartTimeout)
+      clearTimeout(timeout)
+    }
   }, [fen, game, gameResult])
 
   function handleSquareClick(square: Square) {
@@ -221,6 +234,8 @@ export function ChessBoard() {
       const next = new Chess()
       next.load(fen)
       const result = next.move({ from: selectedSquare, to: square, promotion: move.promotion ?? "q" })
+
+      setMoveHistory((prev) => [...prev, { color: result.color, san: result.san }])
 
       if (result.captured) {
         setCapturedByWhite((prev) => [...prev, result.captured as PieceSymbol])
@@ -272,6 +287,7 @@ export function ChessBoard() {
     setLastMove(null)
     setCapturedByWhite([])
     setCapturedByBlack([])
+    setMoveHistory([])
     setIsAiThinking(false)
   }
 
@@ -295,6 +311,19 @@ export function ChessBoard() {
             : "Waiting for AI…"
 
   const isInteractive = !gameResult && !isAiThinking && game.turn() === "w"
+  const moveRows = useMemo(() => {
+    const rows: Array<{ turn: number; white: string; black: string }> = []
+
+    for (let i = 0; i < moveHistory.length; i += 2) {
+      rows.push({
+        turn: i / 2 + 1,
+        white: moveHistory[i]?.san ?? "",
+        black: moveHistory[i + 1]?.san ?? "",
+      })
+    }
+
+    return rows
+  }, [moveHistory])
 
   return (
     <section aria-label="Chess game" className="w-full max-w-[min(92vw,760px)]">
@@ -412,6 +441,36 @@ export function ChessBoard() {
           New game
         </Button>
       </div>
+
+      {showMovesHistory && (
+        <div className="fixed right-4 top-16 z-30 w-[min(90vw,320px)] rounded-lg border bg-card/95 p-3 shadow-lg backdrop-blur-sm">
+          <h2 className="mb-2 text-sm font-semibold">Moves</h2>
+          {moveRows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No moves yet.</p>
+          ) : (
+            <div className="max-h-[60vh] overflow-y-auto pr-1">
+              <table className="w-full table-fixed text-left text-sm">
+                <thead>
+                  <tr className="text-muted-foreground">
+                    <th className="w-12 pb-1">#</th>
+                    <th className="pb-1">White</th>
+                    <th className="pb-1">Black</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {moveRows.map((row) => (
+                    <tr key={row.turn} className="border-t align-top">
+                      <td className="py-1.5 pr-2 text-muted-foreground">{row.turn}.</td>
+                      <td className="py-1.5 pr-2 font-medium">{row.white || "-"}</td>
+                      <td className="py-1.5 pr-2 font-medium">{row.black || "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </section>
   )
 }
