@@ -24,7 +24,7 @@ export default function Page() {
     const handlePlay = () => {
         router.push('/play');
     }
-
+    
     return (
         <main className="chess-page-bg relative flex min-h-svh items-center justify-center px-4 py-8">
             <div className="absolute right-4 top-4">
@@ -45,18 +45,40 @@ export default function Page() {
                                     Select the difficulty level for the AI opponent.
                                 </DialogDescription>
                             </DialogHeader>
-                            <RadioGroup defaultValue="comfortable" className="w-fit">
+                            <RadioGroup defaultValue="easy" className="w-fit">
                                 <div className="flex items-center gap-3">
-                                    <RadioGroupItem value="default" id="r1" />
+                                    <RadioGroupItem value="easy" id="r1" />
                                     <Label htmlFor="r1">Easy</Label>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <RadioGroupItem value="comfortable" id="r2" />
+                                    <RadioGroupItem value="medium" id="r2" />
                                     <Label htmlFor="r2">Medium</Label>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <RadioGroupItem value="compact" id="r3" />
+                                    <RadioGroupItem value="hard" id="r3" />
                                     <Label htmlFor="r3">Hard</Label>
+                                </div>
+                            </RadioGroup>
+                            <DialogHeader>
+                                <DialogTitle>Choose Your Piece</DialogTitle>
+                                <DialogDescription>
+                                    Select the color of the pieces you want to play with.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <RadioGroup defaultValue="white" className="w-fit">
+                                <div className="flex items-center gap-3">
+                                    <RadioGroupItem value="white" id="white" />
+                                    <Label htmlFor="white" className="flex items-center gap-2">
+                                        <img src="/k-white.svg" alt="White King" className="w-6 h-6" />
+                                        White
+                                    </Label>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <RadioGroupItem value="black" id="black" />
+                                    <Label htmlFor="black" className="flex items-center gap-2">
+                                        <img src="/k-black.svg" alt="Black King" className="w-6 h-6" />
+                                        Black
+                                    </Label>
                                 </div>
                             </RadioGroup>
                             <DialogFooter>
