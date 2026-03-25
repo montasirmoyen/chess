@@ -20,9 +20,10 @@ interface ChessPieceProps {
     x: number
     y: number
   }
+  motionVariant?: "normal" | "castle" | "undo"
 }
 
-export function ChessPiece({ type, color, motionOffset }: ChessPieceProps) {
+export function ChessPiece({ type, color, motionOffset, motionVariant = "normal" }: ChessPieceProps) {
   const assetType = type === "n" ? "kn" : type
   const pieceColor = color === "w" ? "white" : "black"
   const src = `/${assetType}-${pieceColor}.svg`
@@ -40,7 +41,7 @@ export function ChessPiece({ type, color, motionOffset }: ChessPieceProps) {
       alt={label}
       draggable={false}
       style={motionStyle}
-      className={`chess-piece-img pointer-events-none h-[90%] w-[90%] select-none object-contain ${motionOffset ? "chess-piece-move" : ""}`}
+      className={`chess-piece-img pointer-events-none h-[90%] w-[90%] select-none object-contain ${motionOffset ? `chess-piece-move ${motionVariant === "castle" ? "chess-piece-move-castle" : ""} ${motionVariant === "undo" ? "chess-piece-move-undo" : ""}` : ""}`}
     />
   )
 }
