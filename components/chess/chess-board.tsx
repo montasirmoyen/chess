@@ -1,12 +1,23 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Chess, type Color, type PieceSymbol, type Square } from "chess.js"
+import { Chess, type Color, type Move, type PieceSymbol, type Square } from "chess.js"
 import { Bot, User } from "lucide-react"
+import { cn, capitalize } from "@/lib/utils"
 
 import { ChessPiece } from "@/components/chess/chess-piece"
 import { Button } from "@/components/ui/button"
-import { cn, capitalize } from "@/lib/utils"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"] as const
 
@@ -38,7 +49,7 @@ function getPieceLabel(type: string) {
     case "r": return "rook"
     case "q": return "queen"
     case "k": return "king"
-    default:  return "piece"
+    default: return "piece"
   }
 }
 
@@ -61,6 +72,19 @@ type GameResult =
 type MoveHistoryEntry = {
   color: Color
   san: string
+  from: Square
+  to: Square
+  flags: string
+  piece: PieceSymbol
+  captured?: PieceSymbol
+  promotion?: PieceSymbol
+}
+
+type PieceMotion = {
+  pieceId: string
+  from: Square
+  to: Square
+  motionVariant: "normal" | "castle" | "undo"
 }
 
 type PieceIdsBySquare = Record<string, string>
@@ -81,6 +105,130 @@ function createInitialPieceIds() {
   }
 
   return map
+}
+
+function getGameResult(game: Chess): GameResult | null {
+  if (game.isCheckmate()) {
+    return { type: "checkmate", winner: game.turn() === "w" ? "b" : "w" }
+  }
+  if (game.isStalemate()) {
+    return { type: "draw", reason: "stalemate" }
+  }
+  if (game.isDraw()) {
+    return { type: "draw", reason: "draw" }
+  }
+  return null
+}
+
+function getCastlingRookMove(move: Pick<Move, "color" | "flags">) {
+  if (move.flags.includes("k")) {
+    return move.color === "w"
+      ? ({ from: "h1", to: "f1" } as const)
+      : ({ from: "h8", to: "f8" } as const)
+  }
+
+  if (move.flags.includes("q")) {
+    return move.color === "w"
+      ? ({ from: "a1", to: "d1" } as const)
+      : ({ from: "a8", to: "d8" } as const)
+  }
+
+  return null
+}
+
+function getCapturedSquare(move: Pick<Move, "from" | "to" | "flags">) {
+  if (move.flags.includes("e")) {
+    return `${move.to[0]}${move.from[1]}` as Square
+  }
+
+  return move.to
+}
+
+function applyMoveToPieceMap(currentMap: PieceIdsBySquare, move: Move) {
+  const nextMap = { ...currentMap }
+  const movingPieceId = nextMap[move.from] ?? `${move.color}-${move.piece}-${move.from}`
+  const motionVariant: PieceMotion["motionVariant"] =
+    move.flags.includes("k") || move.flags.includes("q") ? "castle" : "normal"
+  const motions: PieceMotion[] = [{ pieceId: movingPieceId, from: move.from, to: move.to, motionVariant }]
+
+  delete nextMap[move.from]
+
+  if (move.captured) {
+    delete nextMap[getCapturedSquare(move)]
+  }
+
+  nextMap[move.to] = movingPieceId
+
+  const rookMove = getCastlingRookMove(move)
+  if (rookMove) {
+    const rookPieceId = nextMap[rookMove.from] ?? `${move.color}-r-${rookMove.from}`
+    delete nextMap[rookMove.from]
+    nextMap[rookMove.to] = rookPieceId
+    motions.push({ pieceId: rookPieceId, from: rookMove.from, to: rookMove.to, motionVariant: "castle" })
+  }
+
+  return { nextMap, motions }
+}
+
+function buildUndoMotions(movesToUndo: MoveHistoryEntry[], nextMap: PieceIdsBySquare) {
+  const motions: PieceMotion[] = []
+
+  for (const move of movesToUndo) {
+    const movingPieceId = nextMap[move.from] ?? `${move.color}-${move.piece}-${move.from}`
+    motions.push({
+      pieceId: movingPieceId,
+      from: move.to,
+      to: move.from,
+      motionVariant: "undo",
+    })
+
+    const rookMove = getCastlingRookMove(move)
+    if (rookMove) {
+      const rookPieceId = nextMap[rookMove.from] ?? `${move.color}-r-${rookMove.from}`
+      motions.push({
+        pieceId: rookPieceId,
+        from: rookMove.to,
+        to: rookMove.from,
+        motionVariant: "undo",
+      })
+    }
+  }
+
+  return motions
+}
+
+function buildStateFromMoveHistory(moveHistory: MoveHistoryEntry[]) {
+  const replay = new Chess()
+  let currentMap = createInitialPieceIds()
+  const nextCapturedByWhite: PieceSymbol[] = []
+  const nextCapturedByBlack: PieceSymbol[] = []
+  let nextLastMoveMotions: PieceMotion[] = []
+
+  for (const move of moveHistory) {
+    const result = replay.move({ from: move.from, to: move.to, promotion: move.promotion })
+    if (!result) continue
+
+    if (result.captured) {
+      if (result.color === "w") {
+        nextCapturedByWhite.push(result.captured as PieceSymbol)
+      } else {
+        nextCapturedByBlack.push(result.captured as PieceSymbol)
+      }
+    }
+
+    const { nextMap, motions } = applyMoveToPieceMap(currentMap, result)
+    currentMap = nextMap
+    nextLastMoveMotions = motions
+  }
+
+  return {
+    fen: replay.fen(),
+    pieceIdsBySquare: currentMap,
+    capturedByWhite: nextCapturedByWhite,
+    capturedByBlack: nextCapturedByBlack,
+    lastMoveMotions: nextLastMoveMotions,
+    gameResult: getGameResult(replay),
+  }
 }
 
 function CapturedPieces({
@@ -117,16 +265,13 @@ export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: bo
   const [pieceIdsBySquare, setPieceIdsBySquare] = useState<PieceIdsBySquare>(() => createInitialPieceIds())
   const pieceIdsRef = useRef<PieceIdsBySquare>(pieceIdsBySquare)
   const [moveHistory, setMoveHistory] = useState<MoveHistoryEntry[]>([])
-  const [lastMove, setLastMove] = useState<{
-    pieceId: string
-    from: Square
-    to: Square
-  } | null>(null)
+  const [lastMoveMotions, setLastMoveMotions] = useState<PieceMotion[]>([])
   // capturedByWhite = black pieces that white has captured
   const [capturedByWhite, setCapturedByWhite] = useState<PieceSymbol[]>([])
   // capturedByBlack = white pieces that black has captured
   const [capturedByBlack, setCapturedByBlack] = useState<PieceSymbol[]>([])
   const [isAiThinking, setIsAiThinking] = useState(false)
+  const isPlayingAgainstAi = true
 
   const game = useMemo(() => {
     const g = new Chess()
@@ -183,33 +328,32 @@ export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: bo
       next.load(fen)
       const result = next.move({ from: pick.from, to: pick.to, promotion: pick.promotion ?? "q" })
 
-      setMoveHistory((prev) => [...prev, { color: result.color, san: result.san }])
+      setMoveHistory((prev) => [
+        ...prev,
+        {
+          color: result.color,
+          san: result.san,
+          from: result.from,
+          to: result.to,
+          flags: result.flags,
+          piece: result.piece,
+          captured: result.captured as PieceSymbol | undefined,
+          promotion: result.promotion as PieceSymbol | undefined,
+        },
+      ])
 
       if (result.captured) {
         setCapturedByBlack((prev) => [...prev, result.captured as PieceSymbol])
       }
 
       const currentMap = pieceIdsRef.current
-      const movingPieceId = currentMap[pick.from] ?? `${result.color}-${result.piece}-${pick.from}`
-      const nextMap = { ...currentMap }
-      delete nextMap[pick.from]
-      if (result.captured) {
-        delete nextMap[pick.to]
-      }
-      nextMap[pick.to] = movingPieceId
+      const { nextMap, motions } = applyMoveToPieceMap(currentMap, result)
       pieceIdsRef.current = nextMap
       setPieceIdsBySquare(nextMap)
-      setLastMove({ pieceId: movingPieceId, from: pick.from, to: pick.to })
+      setLastMoveMotions(motions)
 
       setFen(next.fen())
-
-      if (next.isCheckmate()) {
-        setGameResult({ type: "checkmate", winner: "b" })
-      } else if (next.isStalemate()) {
-        setGameResult({ type: "draw", reason: "stalemate" })
-      } else if (next.isDraw()) {
-        setGameResult({ type: "draw", reason: "draw" })
-      }
+      setGameResult(getGameResult(next))
 
       setIsAiThinking(false)
     }, 500)
@@ -235,33 +379,32 @@ export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: bo
       next.load(fen)
       const result = next.move({ from: selectedSquare, to: square, promotion: move.promotion ?? "q" })
 
-      setMoveHistory((prev) => [...prev, { color: result.color, san: result.san }])
+      setMoveHistory((prev) => [
+        ...prev,
+        {
+          color: result.color,
+          san: result.san,
+          from: result.from,
+          to: result.to,
+          flags: result.flags,
+          piece: result.piece,
+          captured: result.captured as PieceSymbol | undefined,
+          promotion: result.promotion as PieceSymbol | undefined,
+        },
+      ])
 
       if (result.captured) {
         setCapturedByWhite((prev) => [...prev, result.captured as PieceSymbol])
       }
 
       const currentMap = pieceIdsRef.current
-      const movingPieceId = currentMap[selectedSquare] ?? `${result.color}-${result.piece}-${selectedSquare}`
-      const nextMap = { ...currentMap }
-      delete nextMap[selectedSquare]
-      if (result.captured) {
-        delete nextMap[square]
-      }
-      nextMap[square] = movingPieceId
+      const { nextMap, motions } = applyMoveToPieceMap(currentMap, result)
       pieceIdsRef.current = nextMap
       setPieceIdsBySquare(nextMap)
-      setLastMove({ pieceId: movingPieceId, from: selectedSquare, to: square })
+      setLastMoveMotions(motions)
 
       setFen(next.fen())
-
-      if (next.isCheckmate()) {
-        setGameResult({ type: "checkmate", winner: "w" })
-      } else if (next.isStalemate()) {
-        setGameResult({ type: "draw", reason: "stalemate" })
-      } else if (next.isDraw()) {
-        setGameResult({ type: "draw", reason: "draw" })
-      }
+      setGameResult(getGameResult(next))
 
       setSelectedSquare(null)
       return
@@ -284,10 +427,31 @@ export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: bo
     const initialPieceIds = createInitialPieceIds()
     pieceIdsRef.current = initialPieceIds
     setPieceIdsBySquare(initialPieceIds)
-    setLastMove(null)
+    setLastMoveMotions([])
     setCapturedByWhite([])
     setCapturedByBlack([])
     setMoveHistory([])
+    setIsAiThinking(false)
+  }
+
+  function handleUndoMove() {
+    if (!isPlayingAgainstAi || isAiThinking || moveHistory.length === 0) return
+
+    const halfMovesToUndo = Math.min(2, moveHistory.length)
+    const movesToUndo = moveHistory.slice(-halfMovesToUndo)
+    const nextHistory = moveHistory.slice(0, -halfMovesToUndo)
+    const rebuilt = buildStateFromMoveHistory(nextHistory)
+    const undoMotions = buildUndoMotions(movesToUndo, rebuilt.pieceIdsBySquare)
+
+    setMoveHistory(nextHistory)
+    setFen(rebuilt.fen)
+    setGameResult(rebuilt.gameResult)
+    setSelectedSquare(null)
+    pieceIdsRef.current = rebuilt.pieceIdsBySquare
+    setPieceIdsBySquare(rebuilt.pieceIdsBySquare)
+    setLastMoveMotions(undoMotions)
+    setCapturedByWhite(rebuilt.capturedByWhite)
+    setCapturedByBlack(rebuilt.capturedByBlack)
     setIsAiThinking(false)
   }
 
@@ -352,17 +516,17 @@ export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: bo
               const isSelected = selectedSquare === square
               const isCapture = Boolean(move?.captured)
               const pieceId = piece ? pieceIdsBySquare[square] : undefined
+              const activeMotion =
+                piece && pieceId
+                  ? lastMoveMotions.find((motion) => motion.pieceId === pieceId && motion.to === square)
+                  : undefined
               const motionOffset =
-                piece &&
-                pieceId &&
-                lastMove &&
-                lastMove.pieceId === pieceId &&
-                lastMove.to === square
+                activeMotion
                   ? (() => {
-                      const from = getSquareCoords(lastMove.from)
-                      const to = getSquareCoords(lastMove.to)
-                      return { x: from.col - to.col, y: from.row - to.row }
-                    })()
+                    const from = getSquareCoords(activeMotion.from)
+                    const to = getSquareCoords(activeMotion.to)
+                    return { x: from.col - to.col, y: from.row - to.row }
+                  })()
                   : undefined
               const pieceName = piece
                 ? `${piece.color === "w" ? "white" : "black"} ${capitalize(getPieceLabel(piece.type))}`
@@ -410,7 +574,14 @@ export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: bo
                       <span className={isCapture ? "chess-capture-ring" : "chess-move-dot"} />
                     </span>
                   ) : null}
-                  {piece ? <ChessPiece type={piece.type} color={piece.color} motionOffset={motionOffset} /> : null}
+                  {piece ? (
+                    <ChessPiece
+                      type={piece.type}
+                      color={piece.color}
+                      motionOffset={motionOffset}
+                      motionVariant={activeMotion?.motionVariant ?? "normal"}
+                    />
+                  ) : null}
                 </button>
               )
             })
@@ -437,14 +608,45 @@ export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: bo
         >
           {statusText}
         </p>
-        <Button variant="secondary" size="sm" onClick={handleReset}>
-          New game
-        </Button>
+        <div className="flex items-center gap-2">
+          {isPlayingAgainstAi && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleUndoMove}
+              disabled={isAiThinking || moveHistory.length === 0}
+            >
+              Undo move
+            </Button>
+          )}
+          <AlertDialog>
+            <AlertDialogTrigger>
+              <Button variant="secondary" size="sm">
+                New game
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will reset the current game and cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleReset}>Continue</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
 
       {showMovesHistory && (
         <div className="fixed right-4 top-16 z-30 w-[min(90vw,320px)] rounded-lg border bg-card/95 p-3 shadow-lg backdrop-blur-sm">
-          <h2 className="mb-2 text-sm font-semibold">Moves</h2>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold">Moves</h2>
+            <span className="text-xs text-muted-foreground">{moveHistory.length} ply</span>
+          </div>
           {moveRows.length === 0 ? (
             <p className="text-sm text-muted-foreground">No moves yet.</p>
           ) : (
