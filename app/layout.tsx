@@ -11,6 +11,11 @@ const fontMono = Geist_Mono({
   variable: "--font-mono",
 })
 
+export const metadata = {
+  title: "Endgame",
+  description: "Play classic chess against an AI or your friends.",
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
