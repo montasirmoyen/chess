@@ -1,12 +1,18 @@
 "use client"
+
 import { useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { ChessBoard } from "@/components/chess/chess-board"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { MenuSquare } from "lucide-react"
+import { parseAIDifficulty } from "@/lib/chess-ai"
 
 export default function Play() {
   const [showMovesHistory, setShowMovesHistory] = useState(false)
+  const searchParams = useSearchParams()
+  const difficulty = parseAIDifficulty(searchParams.get("difficulty"))
+  const playerColor = searchParams.get("color") === "black" ? "b" : "w"
 
   const toggleMovesHistoryGUI = () => {
     setShowMovesHistory((prev) => !prev)
@@ -20,7 +26,7 @@ export default function Play() {
         </Button>
         <ThemeToggle />
       </div>
-      <ChessBoard showMovesHistory={showMovesHistory} />
+      <ChessBoard difficulty={difficulty} playerColor={playerColor} showMovesHistory={showMovesHistory} />
     </main>
   )
 }
