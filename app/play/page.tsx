@@ -12,8 +12,6 @@ import {
 } from "@/components/ui/tooltip"
 import { MenuSquare, Bot } from "lucide-react"
 import { parseAIDifficulty } from "@/lib/chess-ai"
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/app-sidebar"
 
 function PlayContent() {
   const [showMovesHistory, setShowMovesHistory] = useState(false)
