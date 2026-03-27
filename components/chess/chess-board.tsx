@@ -521,8 +521,7 @@ export function ChessBoard({
   const displayColIndexes = playerColor === "w" ? [0, 1, 2, 3, 4, 5, 6, 7] : [7, 6, 5, 4, 3, 2, 1, 0]
 
   return (
-    <section aria-label="Chess game" className="w-full max-w-[min(92vw,760px)]">
-
+    <section aria-label="Chess game" className="w-full max-w-[min(92vw,725px)]">
       {/* AI panel */}
       <div className="mb-2 flex items-center justify-between gap-4">
         <div className="flex items-center gap-1.5 text-sm font-medium">
