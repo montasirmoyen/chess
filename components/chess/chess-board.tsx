@@ -284,6 +284,7 @@ export function ChessBoard({
   const [hintsRemaining, setHintsRemaining] = useState<number>(() => 3)
   const [hintedAtMoveCount, setHintedAtMoveCount] = useState<number | null>(null)
   const [hintMove, setHintMove] = useState<{ from: Square; to: Square } | null>(null)
+  const [showHint, setShowHint] = useState(true)
   const isPlayingAgainstAi = true
   const aiColor: Color = playerColor === "w" ? "b" : "w"
   const engineDifficulty = resolveAIDifficulty(difficulty)
@@ -472,16 +473,19 @@ export function ChessBoard({
     const pick = chooseAIMove(next, difficulty, playerColor)
     if (!pick) {
       setHintMove(null)
+      setShowHint(false)
       return
     }
 
     setHintMove({ from: pick.from, to: pick.to })
+    setShowHint(true)
   }
 
   // Clear hint when move history changes (new ply), so each turn can request a new hint
   useEffect(() => {
     setHintMove(null)
     setHintedAtMoveCount(null)
+    setShowHint(true)
   }, [moveHistory.length])
 
   const whiteScore = materialScore(capturedByWhite)
@@ -537,7 +541,41 @@ export function ChessBoard({
 
       {/* Board */}
       <div className="bg-chess-board-frame rounded-[1.15rem] border p-3 shadow-[0_24px_40px_rgba(0,0,0,0.26)]">
-        <div className="bg-chess-grid grid aspect-square grid-cols-8 grid-rows-8 overflow-hidden rounded-md border">
+        <div className="bg-chess-grid relative grid aspect-square grid-cols-8 grid-rows-8 overflow-hidden rounded-md border">
+          {/* SVG overlay for hint arrow */}
+          {hintMove && showHint && (
+            (() => {
+              const fromCoords = getSquareCoords(hintMove.from)
+              const toCoords = getSquareCoords(hintMove.to)
+
+              const visualFromRow = playerColor === "w" ? fromCoords.row : 7 - fromCoords.row
+              const visualFromCol = playerColor === "w" ? fromCoords.col : 7 - fromCoords.col
+              const visualToRow = playerColor === "w" ? toCoords.row : 7 - toCoords.row
+              const visualToCol = playerColor === "w" ? toCoords.col : 7 - toCoords.col
+
+              const unit = 100 / 8
+              const x1 = (visualFromCol + 0.5) * unit
+              const y1 = (visualFromRow + 0.5) * unit
+              const x2 = (visualToCol + 0.5) * unit
+              const y2 = (visualToRow + 0.5) * unit
+
+              return (
+                <svg
+                  aria-hidden
+                  className="absolute inset-0 pointer-events-none z-20"
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                >
+                  <defs>
+                    <marker id="hint-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth">
+                      <path d="M0,0 L6,3 L0,6 L2,3 z" fill="#ffffff" opacity="1" />
+                    </marker>
+                  </defs>
+                  <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#ffffff" strokeWidth="1" strokeLinecap="round" markerEnd="url(#hint-arrow)" />
+                </svg>
+              )
+            })()
+          )}
           {displayRowIndexes.flatMap((rowIndex, displayRowIndex) =>
             displayColIndexes.map((colIndex, displayColIndex) => {
               const piece = board[rowIndex][colIndex]
@@ -608,17 +646,16 @@ export function ChessBoard({
                       <span className={isCapture ? "chess-capture-ring" : "chess-move-dot"} />
                     </span>
                   ) : null}
-
-                  {(isHintFrom || isHintTo) ? (
+                  {(showHint && (isHintFrom || isHintTo)) ? (
                     <span className="chess-square-overlay pointer-events-none">
                       {isHintFrom && (
                         <span className="absolute inset-0 flex items-center justify-center">
-                          <span className="h-2 w-2 rounded-full bg-amber-400/90 animate-pulse" />
+                          <span className="size-18 rounded-full bg-red-400/90 animate-pulse" />
                         </span>
                       )}
                       {isHintTo && (
                         <span className="absolute inset-0 flex items-center justify-center">
-                          <span className="h-3 w-3 rounded-full bg-amber-400/90 ring-2 ring-amber-300/60" />
+                          <span className="size-18 rounded-full bg-red-400/90 animate-pulse" />
                         </span>
                       )}
                     </span>
@@ -676,6 +713,15 @@ export function ChessBoard({
               disabled={!isInteractive || isAiThinking || hintsRemaining === 0}
             >
               Hint {`(${hintsRemaining})`}
+            </Button>
+          )}
+          {hintMove && showHint && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowHint(false)}
+            >
+              Hide Hint
             </Button>
           )}
           <AlertDialog>
