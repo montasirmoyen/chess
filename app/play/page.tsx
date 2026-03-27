@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useSearchParams } from "next/navigation"
-import { ChessBoard } from "@/components/chess/chess-board"
+import { ChessBoard } from "@/components/chess/board"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import {
@@ -12,8 +12,10 @@ import {
 } from "@/components/ui/tooltip"
 import { MenuSquare, Bot } from "lucide-react"
 import { parseAIDifficulty } from "@/lib/chess-ai"
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/app-sidebar"
 
-export default function Play() {
+function PlayContent() {
   const [showMovesHistory, setShowMovesHistory] = useState(false)
   const searchParams = useSearchParams()
   const difficulty = parseAIDifficulty(searchParams.get("difficulty"))
@@ -32,7 +34,6 @@ export default function Play() {
   return (
     <main className="chess-page-bg relative flex min-h-svh items-center justify-center px-4 py-8">
       <div className="absolute right-4 top-4 gap-4 flex items-center">
-
         <Tooltip>
           <TooltipTrigger>
             <Button className="h-9 w-9" size="icon" variant="outline" onClick={toggleAIChatBotGUI} aria-pressed={showAIChatBot}>
@@ -57,5 +58,11 @@ export default function Play() {
       </div>
       <ChessBoard difficulty={difficulty} playerColor={playerColor} showMovesHistory={showMovesHistory} showAIChatBot={showAIChatBot} />
     </main>
+  )
+}
+
+export default function Play() {
+  return (
+    <PlayContent />
   )
 }
