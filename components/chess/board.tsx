@@ -8,6 +8,7 @@ import { chooseAIMove, resolveAIDifficulty, type AIDifficulty } from "@/lib/ches
 import { cn, capitalize } from "@/lib/utils"
 
 import { ChessPiece } from "@/components/chess/chess-piece"
+import { ChatBot } from "@/components/chess/chatbot"
 import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
@@ -233,6 +234,66 @@ function buildStateFromMoveHistory(moveHistory: MoveHistoryEntry[]) {
   }
 }
 
+function generateBoardContext(
+  game: Chess,
+  moveHistory: MoveHistoryEntry[],
+  capturedByWhite: PieceSymbol[],
+  capturedByBlack: PieceSymbol[]
+): string {
+  if (moveHistory.length === 0) {
+    return "The game just started, all pieces are in their default positions."
+  }
+
+  const board = game.board()
+  let context = "Current board position:\n"
+
+  for (let row = 7; row >= 0; row--) {
+    const rowPieces: string[] = []
+    for (let col = 0; col < 8; col++) {
+      const piece = board[7 - row][col]
+      if (piece) {
+        const square = `${FILES[col]}${row + 1}`
+        const colorName = piece.color === "w" ? "White" : "Black"
+        const pieceName = capitalize(getPieceLabel(piece.type))
+        rowPieces.push(`${colorName} ${pieceName} on ${square}`)
+      }
+    }
+    if (rowPieces.length > 0) {
+      context += `Rank ${row + 1}: ${rowPieces.join(", ")}\n`
+    }
+  }
+
+  // Add captured pieces info
+  if (capturedByWhite.length > 0) {
+    const captured = capturedByWhite.map((p) => capitalize(getPieceLabel(p))).join(", ")
+    context += `\nCaptured by White (black pieces): ${captured}`
+  }
+  if (capturedByBlack.length > 0) {
+    const captured = capturedByBlack.map((p) => capitalize(getPieceLabel(p))).join(", ")
+    context += `\nCaptured by Black (white pieces): ${captured}`
+  }
+
+  // Add game state info
+  if (game.isCheck()) {
+    context += `\n${getColorLabel(game.turn())} is in check!`
+  }
+  if (game.isCheckmate()) {
+    const winner = game.turn() === "w" ? "Black" : "White"
+    context += `\nCheckmate! ${winner} wins.`
+  }
+  if (game.isDraw() || game.isStalemate()) {
+    context += `\nThe game is a draw.`
+  }
+
+  // Add last few moves
+  if (moveHistory.length > 0) {
+    const lastMoves = moveHistory.slice(-6).map((m) => m.san).join(" ")
+    context += `\n\nLast moves: ${lastMoves}`
+  }
+
+  return context
+}
+
 function CapturedPieces({
   pieces,
   color,
@@ -264,10 +325,12 @@ export function ChessBoard({
   difficulty = "easy",
   playerColor = "w",
   showMovesHistory = false,
+  showAIChatBot = false,
 }: {
   difficulty?: AIDifficulty
   playerColor?: Color
   showMovesHistory?: boolean
+  showAIChatBot?: boolean
 }) {
   const [fen, setFen] = useState(() => new Chess().fen())
   const [gameResult, setGameResult] = useState<GameResult | null>(null)
@@ -276,9 +339,7 @@ export function ChessBoard({
   const pieceIdsRef = useRef<PieceIdsBySquare>(pieceIdsBySquare)
   const [moveHistory, setMoveHistory] = useState<MoveHistoryEntry[]>([])
   const [lastMoveMotions, setLastMoveMotions] = useState<PieceMotion[]>([])
-  // capturedByWhite = black pieces that white has captured
   const [capturedByWhite, setCapturedByWhite] = useState<PieceSymbol[]>([])
-  // capturedByBlack = white pieces that black has captured
   const [capturedByBlack, setCapturedByBlack] = useState<PieceSymbol[]>([])
   const [isAiThinking, setIsAiThinking] = useState(false)
   const [hintsRemaining, setHintsRemaining] = useState<number>(() => 3)
@@ -299,7 +360,6 @@ export function ChessBoard({
   const board = useMemo(() => game.board(), [game])
   const selectedPiece = selectedSquare ? game.get(selectedSquare) : null
 
-  // After a move is made, the player in check is the one whose turn it now is
   const checkedColor: Color | null = game.isCheck() ? game.turn() : null
 
   const checkedKingSquare = useMemo(() => {
@@ -358,7 +418,6 @@ export function ChessBoard({
     setGameResult(getGameResult(next))
   }
 
-  // AI: fires whenever it becomes black's turn
   useEffect(() => {
     if (gameResult || game.turn() !== aiColor) return
 
@@ -398,7 +457,6 @@ export function ChessBoard({
       return
     }
 
-    // Execute a move if this square is a legal target
     const move = movesByTarget.get(square)
     if (selectedSquare && move && selectedPiece) {
       const next = new Chess()
@@ -411,7 +469,6 @@ export function ChessBoard({
       return
     }
 
-    // Select a white piece
     const piece = game.get(square)
     if (piece?.color === playerColor) {
       setSelectedSquare(square)
@@ -462,7 +519,6 @@ export function ChessBoard({
   function handleHint() {
     if (!isInteractive) return
 
-    // If we haven't already consumed a hint this player-turn, consume one
     if (hintedAtMoveCount !== moveHistory.length) {
       setHintsRemaining((v) => Math.max(0, v - 1))
       setHintedAtMoveCount(moveHistory.length)
@@ -481,7 +537,6 @@ export function ChessBoard({
     setShowHint(true)
   }
 
-  // Clear hint when move history changes (new ply), so each turn can request a new hint
   useEffect(() => {
     setHintMove(null)
     setHintedAtMoveCount(null)
@@ -523,6 +578,12 @@ export function ChessBoard({
   }, [moveHistory])
   const displayRowIndexes = playerColor === "w" ? [0, 1, 2, 3, 4, 5, 6, 7] : [7, 6, 5, 4, 3, 2, 1, 0]
   const displayColIndexes = playerColor === "w" ? [0, 1, 2, 3, 4, 5, 6, 7] : [7, 6, 5, 4, 3, 2, 1, 0]
+
+  // for the ai
+  const boardContext = useMemo(
+    () => generateBoardContext(game, moveHistory, capturedByWhite, capturedByBlack),
+    [game, moveHistory, capturedByWhite, capturedByBlack]
+  )
 
   return (
     <section aria-label="Chess game" className="w-full max-w-[min(92vw,725px)]">
