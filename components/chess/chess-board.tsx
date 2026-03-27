@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Chess, type Color, type Move, type PieceSymbol, type Square } from "chess.js"
 import { Bot, User } from "lucide-react"
+
+import { chooseAIMove, resolveAIDifficulty, type AIDifficulty } from "@/lib/chess-ai"
 import { cn, capitalize } from "@/lib/utils"
 
 import { ChessPiece } from "@/components/chess/chess-piece"
@@ -258,7 +260,15 @@ function CapturedPieces({
   )
 }
 
-export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: boolean }) {
+export function ChessBoard({
+  difficulty = "easy",
+  playerColor = "w",
+  showMovesHistory = false,
+}: {
+  difficulty?: AIDifficulty
+  playerColor?: Color
+  showMovesHistory?: boolean
+}) {
   const [fen, setFen] = useState(() => new Chess().fen())
   const [gameResult, setGameResult] = useState<GameResult | null>(null)
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null)
@@ -271,7 +281,14 @@ export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: bo
   // capturedByBlack = white pieces that black has captured
   const [capturedByBlack, setCapturedByBlack] = useState<PieceSymbol[]>([])
   const [isAiThinking, setIsAiThinking] = useState(false)
+  const [hintsRemaining, setHintsRemaining] = useState<number>(() => 3)
+  const [hintedAtMoveCount, setHintedAtMoveCount] = useState<number | null>(null)
+  const [hintMove, setHintMove] = useState<{ from: Square; to: Square } | null>(null)
+  const [showHint, setShowHint] = useState(true)
   const isPlayingAgainstAi = true
+  const aiColor: Color = playerColor === "w" ? "b" : "w"
+  const engineDifficulty = resolveAIDifficulty(difficulty)
+  const aiDifficultyLabel = difficulty === "hard" ? "Hard (medium engine)" : capitalize(engineDifficulty)
 
   const game = useMemo(() => {
     const g = new Chess()
@@ -299,73 +316,82 @@ export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: bo
 
   const legalMoves = useMemo(() => {
     if (!selectedSquare || !selectedPiece || gameResult) return []
-    if (selectedPiece.color !== "w") return []
+    if (selectedPiece.color !== playerColor) return []
     return game.moves({ square: selectedSquare, verbose: true })
-  }, [game, gameResult, selectedPiece, selectedSquare])
+  }, [game, gameResult, playerColor, selectedPiece, selectedSquare])
 
   const movesByTarget = useMemo(
     () => new Map(legalMoves.map((m) => [m.to, m])),
     [legalMoves]
   )
 
+  function commitMove(result: Move, next: Chess) {
+    setMoveHistory((prev) => [
+      ...prev,
+      {
+        color: result.color,
+        san: result.san,
+        from: result.from,
+        to: result.to,
+        flags: result.flags,
+        piece: result.piece,
+        captured: result.captured as PieceSymbol | undefined,
+        promotion: result.promotion as PieceSymbol | undefined,
+      },
+    ])
+
+    if (result.captured) {
+      if (result.color === "w") {
+        setCapturedByWhite((prev) => [...prev, result.captured as PieceSymbol])
+      } else {
+        setCapturedByBlack((prev) => [...prev, result.captured as PieceSymbol])
+      }
+    }
+
+    const currentMap = pieceIdsRef.current
+    const { nextMap, motions } = applyMoveToPieceMap(currentMap, result)
+    pieceIdsRef.current = nextMap
+    setPieceIdsBySquare(nextMap)
+    setLastMoveMotions(motions)
+
+    setFen(next.fen())
+    setGameResult(getGameResult(next))
+  }
+
   // AI: fires whenever it becomes black's turn
   useEffect(() => {
-    if (gameResult || game.turn() !== "b") return
+    if (gameResult || game.turn() !== aiColor) return
 
     const thinkingStartTimeout = setTimeout(() => {
       setIsAiThinking(true)
     }, 0)
 
     const timeout = setTimeout(() => {
-      const moves = game.moves({ verbose: true })
-      if (moves.length === 0) {
+      const next = new Chess()
+      next.load(fen)
+
+      const pick = chooseAIMove(next, difficulty, aiColor)
+      if (!pick) {
+        setGameResult(getGameResult(next))
         setIsAiThinking(false)
         return
       }
 
-      const pick = moves[Math.floor(Math.random() * moves.length)]
-      const next = new Chess()
-      next.load(fen)
       const result = next.move({ from: pick.from, to: pick.to, promotion: pick.promotion ?? "q" })
 
-      setMoveHistory((prev) => [
-        ...prev,
-        {
-          color: result.color,
-          san: result.san,
-          from: result.from,
-          to: result.to,
-          flags: result.flags,
-          piece: result.piece,
-          captured: result.captured as PieceSymbol | undefined,
-          promotion: result.promotion as PieceSymbol | undefined,
-        },
-      ])
-
-      if (result.captured) {
-        setCapturedByBlack((prev) => [...prev, result.captured as PieceSymbol])
-      }
-
-      const currentMap = pieceIdsRef.current
-      const { nextMap, motions } = applyMoveToPieceMap(currentMap, result)
-      pieceIdsRef.current = nextMap
-      setPieceIdsBySquare(nextMap)
-      setLastMoveMotions(motions)
-
-      setFen(next.fen())
-      setGameResult(getGameResult(next))
+      commitMove(result, next)
 
       setIsAiThinking(false)
-    }, 500)
+    }, engineDifficulty === "easy" ? 300 : 450)
 
     return () => {
       clearTimeout(thinkingStartTimeout)
       clearTimeout(timeout)
     }
-  }, [fen, game, gameResult])
+  }, [aiColor, difficulty, engineDifficulty, fen, game, gameResult])
 
   function handleSquareClick(square: Square) {
-    if (gameResult || isAiThinking || game.turn() !== "w") return
+    if (gameResult || isAiThinking || game.turn() !== playerColor) return
 
     if (selectedSquare === square) {
       setSelectedSquare(null)
@@ -379,32 +405,7 @@ export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: bo
       next.load(fen)
       const result = next.move({ from: selectedSquare, to: square, promotion: move.promotion ?? "q" })
 
-      setMoveHistory((prev) => [
-        ...prev,
-        {
-          color: result.color,
-          san: result.san,
-          from: result.from,
-          to: result.to,
-          flags: result.flags,
-          piece: result.piece,
-          captured: result.captured as PieceSymbol | undefined,
-          promotion: result.promotion as PieceSymbol | undefined,
-        },
-      ])
-
-      if (result.captured) {
-        setCapturedByWhite((prev) => [...prev, result.captured as PieceSymbol])
-      }
-
-      const currentMap = pieceIdsRef.current
-      const { nextMap, motions } = applyMoveToPieceMap(currentMap, result)
-      pieceIdsRef.current = nextMap
-      setPieceIdsBySquare(nextMap)
-      setLastMoveMotions(motions)
-
-      setFen(next.fen())
-      setGameResult(getGameResult(next))
+      commitMove(result, next)
 
       setSelectedSquare(null)
       return
@@ -412,7 +413,7 @@ export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: bo
 
     // Select a white piece
     const piece = game.get(square)
-    if (piece?.color === "w") {
+    if (piece?.color === playerColor) {
       setSelectedSquare(square)
       return
     }
@@ -432,6 +433,9 @@ export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: bo
     setCapturedByBlack([])
     setMoveHistory([])
     setIsAiThinking(false)
+    setHintsRemaining(3)
+    setHintedAtMoveCount(null)
+    setHintMove(null)
   }
 
   function handleUndoMove() {
@@ -455,6 +459,35 @@ export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: bo
     setIsAiThinking(false)
   }
 
+  function handleHint() {
+    if (!isInteractive) return
+
+    // If we haven't already consumed a hint this player-turn, consume one
+    if (hintedAtMoveCount !== moveHistory.length) {
+      setHintsRemaining((v) => Math.max(0, v - 1))
+      setHintedAtMoveCount(moveHistory.length)
+    }
+
+    const next = new Chess()
+    next.load(fen)
+    const pick = chooseAIMove(next, difficulty, playerColor)
+    if (!pick) {
+      setHintMove(null)
+      setShowHint(false)
+      return
+    }
+
+    setHintMove({ from: pick.from, to: pick.to })
+    setShowHint(true)
+  }
+
+  // Clear hint when move history changes (new ply), so each turn can request a new hint
+  useEffect(() => {
+    setHintMove(null)
+    setHintedAtMoveCount(null)
+    setShowHint(true)
+  }, [moveHistory.length])
+
   const whiteScore = materialScore(capturedByWhite)
   const blackScore = materialScore(capturedByBlack)
   const whiteAdv = Math.max(0, whiteScore - blackScore)
@@ -470,11 +503,11 @@ export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: bo
         ? `${getColorLabel(checkedColor)} is in check!`
         : selectedPiece
           ? `${capitalize(getPieceLabel(selectedPiece.type))} on ${getSquareLabel(selectedSquare!)} — ${legalMoves.length} legal move${legalMoves.length === 1 ? "" : "s"}`
-          : game.turn() === "w"
-            ? "Your turn — select a white piece."
+          : game.turn() === playerColor
+            ? `Your turn — select a ${getColorLabel(playerColor).toLowerCase()} piece.`
             : "Waiting for AI…"
 
-  const isInteractive = !gameResult && !isAiThinking && game.turn() === "w"
+  const isInteractive = !gameResult && !isAiThinking && game.turn() === playerColor
   const moveRows = useMemo(() => {
     const rows: Array<{ turn: number; white: string; black: string }> = []
 
@@ -488,33 +521,72 @@ export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: bo
 
     return rows
   }, [moveHistory])
+  const displayRowIndexes = playerColor === "w" ? [0, 1, 2, 3, 4, 5, 6, 7] : [7, 6, 5, 4, 3, 2, 1, 0]
+  const displayColIndexes = playerColor === "w" ? [0, 1, 2, 3, 4, 5, 6, 7] : [7, 6, 5, 4, 3, 2, 1, 0]
 
   return (
-    <section aria-label="Chess game" className="w-full max-w-[min(92vw,760px)]">
-
+    <section aria-label="Chess game" className="w-full max-w-[min(92vw,725px)]">
       {/* AI panel */}
       <div className="mb-2 flex items-center justify-between gap-4">
         <div className="flex items-center gap-1.5 text-sm font-medium">
           <Bot className="h-4 w-4 opacity-70" />
           <span>AI</span>
+          <span className="text-xs font-normal text-foreground/50">{aiDifficultyLabel}</span>
           {isAiThinking && (
             <span className="animate-pulse text-xs font-normal text-foreground/50">thinking…</span>
           )}
         </div>
-        <CapturedPieces pieces={capturedByBlack} color="w" advantage={blackAdv} />
+        <CapturedPieces pieces={aiColor === "w" ? capturedByWhite : capturedByBlack} color={playerColor} advantage={aiColor === "w" ? whiteAdv : blackAdv} />
       </div>
 
       {/* Board */}
       <div className="bg-chess-board-frame rounded-[1.15rem] border p-3 shadow-[0_24px_40px_rgba(0,0,0,0.26)]">
-        <div className="bg-chess-grid grid aspect-square grid-cols-8 grid-rows-8 overflow-hidden rounded-md border">
-          {board.flatMap((row, rowIndex) =>
-            row.map((piece, colIndex) => {
+        <div className="bg-chess-grid relative grid aspect-square grid-cols-8 grid-rows-8 overflow-hidden rounded-md border">
+          {/* SVG overlay for hint arrow */}
+          {hintMove && showHint && (
+            (() => {
+              const fromCoords = getSquareCoords(hintMove.from)
+              const toCoords = getSquareCoords(hintMove.to)
+
+              const visualFromRow = playerColor === "w" ? fromCoords.row : 7 - fromCoords.row
+              const visualFromCol = playerColor === "w" ? fromCoords.col : 7 - fromCoords.col
+              const visualToRow = playerColor === "w" ? toCoords.row : 7 - toCoords.row
+              const visualToCol = playerColor === "w" ? toCoords.col : 7 - toCoords.col
+
+              const unit = 100 / 8
+              const x1 = (visualFromCol + 0.5) * unit
+              const y1 = (visualFromRow + 0.5) * unit
+              const x2 = (visualToCol + 0.5) * unit
+              const y2 = (visualToRow + 0.5) * unit
+
+              return (
+                <svg
+                  aria-hidden
+                  className="absolute inset-0 pointer-events-none z-20"
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                >
+                  <defs>
+                    <marker id="hint-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth">
+                      <path d="M0,0 L6,3 L0,6 L2,3 z" fill="#ffffff" opacity="1" />
+                    </marker>
+                  </defs>
+                  <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#ffffff" strokeWidth="1" strokeLinecap="round" markerEnd="url(#hint-arrow)" />
+                </svg>
+              )
+            })()
+          )}
+          {displayRowIndexes.flatMap((rowIndex, displayRowIndex) =>
+            displayColIndexes.map((colIndex, displayColIndex) => {
+              const piece = board[rowIndex][colIndex]
               const isLightSquare = (rowIndex + colIndex) % 2 === 0
               const square = getSquare(rowIndex, colIndex)
               const move = movesByTarget.get(square)
               const isCheckedKing = checkedKingSquare === square
               const isSelected = selectedSquare === square
               const isCapture = Boolean(move?.captured)
+              const isHintFrom = hintMove?.from === square
+              const isHintTo = hintMove?.to === square
               const pieceId = piece ? pieceIdsBySquare[square] : undefined
               const activeMotion =
                 piece && pieceId
@@ -547,7 +619,7 @@ export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: bo
                   )}
                   onClick={() => handleSquareClick(square)}
                 >
-                  {colIndex === 0 && (
+                  {displayColIndex === 0 && (
                     <span
                       aria-hidden="true"
                       className={cn(
@@ -555,10 +627,10 @@ export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: bo
                         isLightSquare ? "text-chess-board-dark/70" : "text-chess-board-light/70"
                       )}
                     >
-                      {8 - rowIndex}
+                      {square[1]}
                     </span>
                   )}
-                  {rowIndex === 7 && (
+                  {displayRowIndex === 7 && (
                     <span
                       aria-hidden="true"
                       className={cn(
@@ -566,12 +638,26 @@ export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: bo
                         isLightSquare ? "text-chess-board-dark/70" : "text-chess-board-light/70"
                       )}
                     >
-                      {FILES[colIndex]}
+                      {square[0]}
                     </span>
                   )}
                   {move ? (
                     <span className="chess-square-overlay">
                       <span className={isCapture ? "chess-capture-ring" : "chess-move-dot"} />
+                    </span>
+                  ) : null}
+                  {(showHint && (isHintFrom || isHintTo)) ? (
+                    <span className="chess-square-overlay pointer-events-none">
+                      {isHintFrom && (
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          <span className="size-18 rounded-full bg-red-400/90 animate-pulse" />
+                        </span>
+                      )}
+                      {isHintTo && (
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          <span className="size-18 rounded-full bg-red-400/90 animate-pulse" />
+                        </span>
+                      )}
                     </span>
                   ) : null}
                   {piece ? (
@@ -595,7 +681,7 @@ export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: bo
           <User className="h-4 w-4 opacity-70" />
           <span>You</span>
         </div>
-        <CapturedPieces pieces={capturedByWhite} color="b" advantage={whiteAdv} />
+        <CapturedPieces pieces={playerColor === "w" ? capturedByWhite : capturedByBlack} color={aiColor} advantage={playerColor === "w" ? whiteAdv : blackAdv} />
       </div>
 
       {/* Status bar */}
@@ -617,6 +703,25 @@ export function ChessBoard({ showMovesHistory = false }: { showMovesHistory?: bo
               disabled={isAiThinking || moveHistory.length === 0}
             >
               Undo move
+            </Button>
+          )}
+          {isPlayingAgainstAi && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleHint}
+              disabled={!isInteractive || isAiThinking || hintsRemaining === 0}
+            >
+              Hint {`(${hintsRemaining})`}
+            </Button>
+          )}
+          {hintMove && showHint && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowHint(false)}
+            >
+              Hide Hint
             </Button>
           )}
           <AlertDialog>

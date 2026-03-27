@@ -5,199 +5,195 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-heading: var(--font-sans);
-    --font-sans: var(--font-sans);
-    --color-sidebar-ring: var(--sidebar-ring);
-    --color-sidebar-border: var(--sidebar-border);
-    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-    --color-sidebar-accent: var(--sidebar-accent);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-    --color-sidebar-primary: var(--sidebar-primary);
-    --color-sidebar-foreground: var(--sidebar-foreground);
-    --color-sidebar: var(--sidebar);
-    --color-chart-5: var(--chart-5);
-    --color-chart-4: var(--chart-4);
-    --color-chart-3: var(--chart-3);
-    --color-chart-2: var(--chart-2);
-    --color-chart-1: var(--chart-1);
-    --color-ring: var(--ring);
-    --color-input: var(--input);
-    --color-border: var(--border);
-    --color-destructive: var(--destructive);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-accent: var(--accent);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-muted: var(--muted);
-    --color-secondary-foreground: var(--secondary-foreground);
-    --color-secondary: var(--secondary);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-primary: var(--primary);
-    --color-popover-foreground: var(--popover-foreground);
-    --color-popover: var(--popover);
-    --color-card-foreground: var(--card-foreground);
-    --color-card: var(--card);
-    --color-foreground: var(--foreground);
-    --color-background: var(--background);
-    --color-chess-page-start: var(--chess-page-start);
-    --color-chess-page-mid: var(--chess-page-mid);
-    --color-chess-page-end: var(--chess-page-end);
-    --color-chess-board-light: var(--chess-board-light);
-    --color-chess-board-dark: var(--chess-board-dark);
-    --color-chess-frame-wood-1: var(--chess-frame-wood-1);
-    --color-chess-frame-wood-2: var(--chess-frame-wood-2);
-    --color-chess-frame-border: var(--chess-frame-border);
-    --color-chess-grid-border: var(--chess-grid-border);
-    --color-chess-grid-highlight: var(--chess-grid-highlight);
-    --color-chess-hover-glow: var(--chess-hover-glow);
-    --radius-sm: calc(var(--radius) * 0.6);
-    --radius-md: calc(var(--radius) * 0.8);
-    --radius-lg: var(--radius);
-    --radius-xl: calc(var(--radius) * 1.4);
-    --radius-2xl: calc(var(--radius) * 1.8);
-    --radius-3xl: calc(var(--radius) * 2.2);
-    --radius-4xl: calc(var(--radius) * 2.6);
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --color-chess-page-start: var(--chess-page-start);
+  --color-chess-page-mid: var(--chess-page-mid);
+  --color-chess-page-end: var(--chess-page-end);
+  --color-chess-board-light: var(--chess-board-light);
+  --color-chess-board-dark: var(--chess-board-dark);
+  --color-chess-frame-wood-1: var(--chess-frame-wood-1);
+  --color-chess-frame-wood-2: var(--chess-frame-wood-2);
+  --color-chess-frame-border: var(--chess-frame-border);
+  --color-chess-grid-border: var(--chess-grid-border);
+  --color-chess-grid-highlight: var(--chess-grid-highlight);
+  --color-chess-hover-glow: var(--chess-hover-glow);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
-    --chess-page-start: #f8f0e4;
-    --chess-page-mid: #efe2cf;
-    --chess-page-end: #e4d2bb;
-    --chess-board-light: #f0d9b5;
-    --chess-board-dark: #b58863;
-    --chess-frame-wood-1: #7f5539;
-    --chess-frame-wood-2: #5f3e27;
-    --chess-frame-border: rgb(0 0 0 / 0.25);
-    --chess-grid-border: rgb(0 0 0 / 0.25);
-    --chess-grid-highlight: rgb(255 255 255 / 0.08);
-    --chess-hover-glow: rgb(250 204 21 / 0.52);
-    --chess-hover-glow-outer: rgb(250 204 21 / 0.2);
-    --chess-piece-shadow: 0 4px 4px rgb(0 0 0 / 0.25);
-    --chess-selected-ring: rgb(255 244 191 / 0.95);
-    --chess-selected-fill: rgb(255 244 191 / 0.18);
-    --chess-move-dot: rgb(32 34 37 / 0.26);
-    --chess-capture-ring: rgb(164 28 28 / 0.72);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+  --chess-page-start: #f8f0e4;
+  --chess-page-mid: #efe2cf;
+  --chess-page-end: #e4d2bb;
+  --chess-board-light: #f0d9b5;
+  --chess-board-dark: #b58863;
+  --chess-frame-wood-1: #7f5539;
+  --chess-frame-wood-2: #5f3e27;
+  --chess-frame-border: rgb(0 0 0 / 0.25);
+  --chess-grid-border: rgb(0 0 0 / 0.25);
+  --chess-grid-highlight: rgb(255 255 255 / 0.08);
+  --chess-hover-glow: rgb(250 204 21 / 0.52);
+  --chess-hover-glow-outer: rgb(250 204 21 / 0.2);
+  --chess-piece-shadow: 0 4px 4px rgb(0 0 0 / 0.25);
+  --chess-selected-ring: rgb(255 244 191 / 0.95);
+  --chess-selected-fill: rgb(255 244 191 / 0.18);
+  --chess-move-dot: rgb(32 34 37 / 0.26);
+  --chess-capture-ring: rgb(164 28 28 / 0.72);
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
-    --chess-page-start: #2b2017;
-    --chess-page-mid: #1f1813;
-    --chess-page-end: #15110f;
-    --chess-board-light: #cab394;
-    --chess-board-dark: #8c5f3d;
-    --chess-frame-wood-1: #6d4a31;
-    --chess-frame-wood-2: #3e2a1c;
-    --chess-frame-border: rgb(255 255 255 / 0.12);
-    --chess-grid-border: rgb(255 255 255 / 0.12);
-    --chess-grid-highlight: rgb(255 255 255 / 0.04);
-    --chess-hover-glow: rgb(250 204 21 / 0.44);
-    --chess-hover-glow-outer: rgb(250 204 21 / 0.16);
-    --chess-piece-shadow: 0 6px 8px rgb(0 0 0 / 0.25);
-    --chess-selected-ring: rgb(250 229 163 / 0.92);
-    --chess-selected-fill: rgb(250 229 163 / 0.12);
-    --chess-move-dot: rgb(255 249 240 / 0.25);
-    --chess-capture-ring: rgb(248 113 113 / 0.7);
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+  --chess-page-start: #2b2017;
+  --chess-page-mid: #1f1813;
+  --chess-page-end: #15110f;
+  --chess-board-light: #cab394;
+  --chess-board-dark: #8c5f3d;
+  --chess-frame-wood-1: #6d4a31;
+  --chess-frame-wood-2: #3e2a1c;
+  --chess-frame-border: rgb(255 255 255 / 0.12);
+  --chess-grid-border: rgb(255 255 255 / 0.12);
+  --chess-grid-highlight: rgb(255 255 255 / 0.04);
+  --chess-hover-glow: rgb(250 204 21 / 0.44);
+  --chess-hover-glow-outer: rgb(250 204 21 / 0.16);
+  --chess-piece-shadow: 0 6px 8px rgb(0 0 0 / 0.25);
+  --chess-selected-ring: rgb(250 229 163 / 0.92);
+  --chess-selected-fill: rgb(250 229 163 / 0.12);
+  --chess-move-dot: rgb(255 249 240 / 0.5);
+  --chess-capture-ring: rgb(248 113 113 / 0.7);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    }
+  }
+
   body {
     @apply bg-background text-foreground;
-    }
+  }
+
   html {
     @apply font-sans;
-    }
+  }
 }
 
 @layer components {
   .chess-page-bg {
-    background-image: radial-gradient(
-      circle at top,
-      var(--chess-page-start) 0%,
-      var(--chess-page-mid) 45%,
-      var(--chess-page-end) 100%
-    );
+    background-image: radial-gradient(circle at top,
+        var(--chess-page-start) 0%,
+        var(--chess-page-mid) 45%,
+        var(--chess-page-end) 100%);
   }
 
   .chess-board-frame {
     border-color: var(--chess-frame-border);
     background-color: var(--chess-frame-wood-2);
     background-image:
-      linear-gradient(
-        140deg,
+      linear-gradient(140deg,
         color-mix(in oklab, var(--chess-frame-wood-1) 85%, black) 0%,
         var(--chess-frame-wood-1) 48%,
-        var(--chess-frame-wood-2) 100%
-      ),
-      repeating-linear-gradient(
-        45deg,
+        var(--chess-frame-wood-2) 100%),
+      repeating-linear-gradient(45deg,
         rgb(255 255 255 / 0.06) 0 4px,
-        rgb(0 0 0 / 0.05) 4px 8px
-      );
+        rgb(0 0 0 / 0.05) 4px 8px);
   }
 
   .chess-grid {
