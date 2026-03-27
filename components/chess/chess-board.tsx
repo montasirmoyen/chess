@@ -281,6 +281,9 @@ export function ChessBoard({
   // capturedByBlack = white pieces that black has captured
   const [capturedByBlack, setCapturedByBlack] = useState<PieceSymbol[]>([])
   const [isAiThinking, setIsAiThinking] = useState(false)
+  const [hintsRemaining, setHintsRemaining] = useState<number>(() => 3)
+  const [hintedAtMoveCount, setHintedAtMoveCount] = useState<number | null>(null)
+  const [hintMove, setHintMove] = useState<{ from: Square; to: Square } | null>(null)
   const isPlayingAgainstAi = true
   const aiColor: Color = playerColor === "w" ? "b" : "w"
   const engineDifficulty = resolveAIDifficulty(difficulty)
@@ -429,6 +432,9 @@ export function ChessBoard({
     setCapturedByBlack([])
     setMoveHistory([])
     setIsAiThinking(false)
+    setHintsRemaining(3)
+    setHintedAtMoveCount(null)
+    setHintMove(null)
   }
 
   function handleUndoMove() {
@@ -451,6 +457,32 @@ export function ChessBoard({
     setCapturedByBlack(rebuilt.capturedByBlack)
     setIsAiThinking(false)
   }
+
+  function handleHint() {
+    if (!isInteractive) return
+
+    // If we haven't already consumed a hint this player-turn, consume one
+    if (hintedAtMoveCount !== moveHistory.length) {
+      setHintsRemaining((v) => Math.max(0, v - 1))
+      setHintedAtMoveCount(moveHistory.length)
+    }
+
+    const next = new Chess()
+    next.load(fen)
+    const pick = chooseAIMove(next, difficulty, playerColor)
+    if (!pick) {
+      setHintMove(null)
+      return
+    }
+
+    setHintMove({ from: pick.from, to: pick.to })
+  }
+
+  // Clear hint when move history changes (new ply), so each turn can request a new hint
+  useEffect(() => {
+    setHintMove(null)
+    setHintedAtMoveCount(null)
+  }, [moveHistory.length])
 
   const whiteScore = materialScore(capturedByWhite)
   const blackScore = materialScore(capturedByBlack)
@@ -516,6 +548,8 @@ export function ChessBoard({
               const isCheckedKing = checkedKingSquare === square
               const isSelected = selectedSquare === square
               const isCapture = Boolean(move?.captured)
+              const isHintFrom = hintMove?.from === square
+              const isHintTo = hintMove?.to === square
               const pieceId = piece ? pieceIdsBySquare[square] : undefined
               const activeMotion =
                 piece && pieceId
@@ -575,6 +609,21 @@ export function ChessBoard({
                       <span className={isCapture ? "chess-capture-ring" : "chess-move-dot"} />
                     </span>
                   ) : null}
+
+                  {(isHintFrom || isHintTo) ? (
+                    <span className="chess-square-overlay pointer-events-none">
+                      {isHintFrom && (
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          <span className="h-2 w-2 rounded-full bg-amber-400/90 animate-pulse" />
+                        </span>
+                      )}
+                      {isHintTo && (
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          <span className="h-3 w-3 rounded-full bg-amber-400/90 ring-2 ring-amber-300/60" />
+                        </span>
+                      )}
+                    </span>
+                  ) : null}
                   {piece ? (
                     <ChessPiece
                       type={piece.type}
@@ -618,6 +667,16 @@ export function ChessBoard({
               disabled={isAiThinking || moveHistory.length === 0}
             >
               Undo move
+            </Button>
+          )}
+          {isPlayingAgainstAi && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleHint}
+              disabled={!isInteractive || isAiThinking || hintsRemaining === 0}
+            >
+              Hint {`(${hintsRemaining})`}
             </Button>
           )}
           <AlertDialog>
