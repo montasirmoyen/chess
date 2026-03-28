@@ -349,7 +349,7 @@ export function ChessBoard({
   const isPlayingAgainstAi = true
   const aiColor: Color = playerColor === "w" ? "b" : "w"
   const engineDifficulty = resolveAIDifficulty(difficulty)
-  const aiDifficultyLabel = difficulty === "hard" ? "Hard (medium engine)" : capitalize(engineDifficulty)
+  const aiDifficultyLabel = capitalize(engineDifficulty)
 
   const game = useMemo(() => {
     const g = new Chess()
